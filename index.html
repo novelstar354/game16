@@ -2,8 +2,9 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>SLOT MACHINE</title>
+<title>SLOT MACHINE </title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+ <link rel="icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXpgl9VrjKZLmPonXHSLJ8uLyNOPi7chR_Mtt0SCVJTx5-OI3J9WMJv_aO&s=10" sizes="16×16" type="image/png" />  
 <style>
 *{box-sizing:border-box}
 body{
@@ -13,19 +14,34 @@ body{
 }
 #game{
  background:#222;padding:12px;border-radius:16px;
- width:min(480px,96vw);
+ width:min(460px,96vw);
 }
 .fullscreen #game{
  width:100vw;height:100vh;border-radius:0;
+ display:flex;flex-direction:column;justify-content:center;
 }
 h1,h3{text-align:center;margin:6px 0}
-
 #reels{display:flex;gap:8px;margin:10px 0}
-canvas{
- flex:1;
- background:#000;
- border-radius:12px;
+.reel{
+ flex:1;height:90px;background:#000;border-radius:12px;
+ font-size:44px;display:flex;justify-content:center;align-items:center;
  box-shadow:inset 0 0 12px #666;
+ transition:.15s;
+}
+.fullscreen .reel{height:120px;font-size:56px}
+
+.flash{filter:brightness(2)}
+.rare{animation:rainbow 1s}
+@keyframes rainbow{
+ 0%{filter:hue-rotate(0deg)}
+ 100%{filter:hue-rotate(360deg)}
+}
+.shake{animation:shake .3s}
+@keyframes shake{
+ 0%{transform:translate(0)}
+ 25%{transform:translate(3px)}
+ 50%{transform:translate(-3px)}
+ 75%{transform:translate(3px)}
 }
 
 .controls{display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap}
@@ -35,7 +51,6 @@ button,select{
 button{background:#ffcc00}
 .stop{background:#ff6666}
 .auto{background:#66ccff}
-
 #info{text-align:center;font-size:14px}
 .win{color:#00ff88;font-weight:bold}
 .jackpot{color:#ff66ff;font-weight:bold}
@@ -54,9 +69,9 @@ button{background:#ffcc00}
 <h1>SLOT MACHINE</h1>
 
 <div id="reels">
- <canvas id="c1"></canvas>
- <canvas id="c2"></canvas>
- <canvas id="c3"></canvas>
+ <div class="reel" id="r1">❓</div>
+ <div class="reel" id="r2">❓</div>
+ <div class="reel" id="r3">❓</div>
 </div>
 
 <div class="controls">
@@ -84,7 +99,10 @@ button{background:#ffcc00}
 
 <div id="info">
  メダル: <span id="medal"></span><br>
- <span id="msg"></span>
+ <span id="msg"></span><br>
+ <small>
+  Space/Enter:START | 1-3:STOP | B:BET | S:SOUND | F:FULL | A:AUTO
+ </small>
 </div>
 
 <h3>📊 統計</h3>
@@ -95,75 +113,20 @@ button{background:#ffcc00}
 </div>
 
 <script>
-/* ===== シンボル ===== */
-const symbols=["🍒","🍋","🔔","⭐","🎞️","7️⃣","💎"];
-
-/* ===== Canvasリール ===== */
-class Reel{
- constructor(canvas){
-  this.c=canvas;
-  this.ctx=canvas.getContext("2d");
-  this.index=0;
-  this.y=0;
-  this.speed=0;
-  this.running=false;
-  this.resize();
-  this.loop();
- }
- resize(){
-  this.c.width=this.c.clientWidth*devicePixelRatio;
-  this.c.height=120*devicePixelRatio;
-  this.ctx.scale(devicePixelRatio,devicePixelRatio);
- }
- start(){
-  this.running=true;
-  this.speed=20+Math.random()*10;
- }
- stop(){
-  this.running=false;
-  this.index=Math.floor(Math.random()*symbols.length);
- }
- draw(){
-  const h=this.c.height/devicePixelRatio;
-  const w=this.c.width/devicePixelRatio;
-  this.ctx.clearRect(0,0,w,h);
-  this.ctx.font="48px system-ui";
-  this.ctx.textAlign="center";
-  this.ctx.textBaseline="middle";
-  for(let i=-1;i<=1;i++){
-   const s=symbols[(this.index+i+symbols.length)%symbols.length];
-   this.ctx.fillText(s,w/2,h/2+i*60+this.y);
-  }
- }
- update(){
-  if(this.running){
-   this.y+=this.speed;
-   if(this.y>=60){
-    this.y=0;
-    this.index=(this.index+1)%symbols.length;
-   }
-  }
- }
- loop(){
-  this.update();
-  this.draw();
-  requestAnimationFrame(()=>this.loop());
- }
-}
-
-/* ===== 初期化 ===== */
-const reels=[
- new Reel(c1),
- new Reel(c2),
- new Reel(c3)
+/* ===== 設定 ===== */
+const table=[
+ {s:"🍒",w:25},{s:"🍋",w:25},{s:"🔔",w:18},
+ {s:"⭐",w:15},{s:"🎞️",w:10},{s:"7️⃣",w:5},{s:"💎",w:2}
 ];
 
-let spinning=[false,false,false];
-let medal=100;
+let medal=100,sound=true;
+let spinning=[false,false,false],timers=[];
 let history=[];
 let stats={play:0,win:0,diff:0};
+
 let auto=false,autoTimer=null;
-let sound=true;
+
+const reels=[r1,r2,r3];
 
 /* ===== サウンド ===== */
 function se(f=600,t=80){
@@ -173,52 +136,66 @@ function se(f=600,t=80){
  setTimeout(()=>{o.stop();a.close()},t);
 }
 
-/* ===== ゲーム処理 ===== */
+/* ===== ゲーム ===== */
 function start(){
  const bet=+betEl.value;
  if(medal<bet){msg("メダル不足");auto=false;return;}
  medal-=bet;
  reels.forEach((r,i)=>{
+  if(spinning[i])return;
   spinning[i]=true;
-  r.start();
+  timers[i]=setInterval(()=>r.textContent=lot(),60);
  });
  update();
 }
 
 function stopReel(i){
  if(!spinning[i])return;
+ clearInterval(timers[i]);
  spinning[i]=false;
- reels[i].stop();
+ reels[i].classList.add("shake");
  se(800);
+ setTimeout(()=>reels[i].classList.remove("shake"),150);
  if(spinning.every(v=>!v))judge();
 }
 
 function judge(){
  stats.play++;
- const a=symbols[reels[0].index];
- const b=symbols[reels[1].index];
- const c=symbols[reels[2].index];
+ const a=r1.textContent,b=r2.textContent,c=r3.textContent;
  const bet=+betEl.value;
  let gain=0,text="ハズレ",cls="";
+
  if(a===b&&b===c){
   let m=a==="💎"?100:a==="7️⃣"?30:a==="🎞️"?15:5;
   gain=bet*m; medal+=gain;
-  text="🎉 BIG WIN x"+m; cls="win"; stats.win++;
+  text="🎉 BIG WIN x"+m;
+  cls=a==="💎"?"jackpot":"win";
+  stats.win++;
+  reels.forEach(r=>r.classList.add("flash","rare"));
+  setTimeout(()=>reels.forEach(r=>r.classList.remove("flash","rare")),600);
  }else if(a===b||b===c||a===c){
   gain=bet*2; medal+=gain;
   text="✨ WIN x2"; cls="win"; stats.win++;
  }
+
  const diff=gain-bet;
  stats.diff+=diff;
- history.unshift(`[${a}${b}${c}] ${text} (${diff>=0?"+":""}${diff}枚)`);
+
+ history.unshift({
+  t:new Date().toLocaleTimeString(),
+  line:`${a}${b}${c} → ${text}`,
+  diff
+ });
  history=history.slice(0,30);
+
  renderHistory();renderStats();
  msg(text,cls);update();
 }
 
-/* ===== オート ===== */
+/* ===== オートプレイ ===== */
 function toggleAuto(){
  auto=!auto;
+ msg(auto?"▶ AUTO ON":"■ AUTO OFF");
  if(auto){
   autoTimer=setInterval(()=>{
    if(spinning.some(v=>v))return;
@@ -227,8 +204,9 @@ function toggleAuto(){
    setTimeout(()=>stopReel(1),900);
    setTimeout(()=>stopReel(2),1200);
   },1600);
- }else clearInterval(autoTimer);
- msg(auto?"▶ AUTO ON":"■ AUTO OFF");
+ }else{
+  clearInterval(autoTimer);
+ }
 }
 
 /* ===== フルスクリーン ===== */
@@ -242,19 +220,27 @@ function toggleFull(){
  }
 }
 
-/* ===== UI ===== */
-function update(){medalEl.textContent=medal}
-function msg(t,c=""){msgEl.textContent=t;msgEl.className=c}
+/* ===== ユーティリティ ===== */
+function lot(){
+ let r=Math.random()*100,sum=0;
+ for(let t of table){sum+=t.w;if(r<sum)return t.s}
+}
 function renderHistory(){
- historyEl.innerHTML=history.map(h=>`<div>${h}</div>`).join("");
+ historyEl.innerHTML=history.map(h=>{
+  const s=h.diff>=0?"+":"";
+  const c=h.diff>=0?"plus":"minus";
+  return `<div>[${h.t}] ${h.line} <span class="${c}">(${s}${h.diff}枚)</span></div>`;
+ }).join("");
 }
 function renderStats(){
  statsEl.innerHTML=
-  `総回転:${stats.play}<br>
-   勝利:${stats.win}<br>
-   勝率:${stats.play?Math.round(stats.win/stats.play*100):0}%<br>
-   総差枚:${stats.diff}`;
+  `総回転: ${stats.play}<br>
+   勝利: ${stats.win}<br>
+   勝率: ${stats.play?Math.round(stats.win/stats.play*100):0}%<br>
+   総差枚: ${stats.diff}`;
 }
+function update(){medalEl.textContent=medal}
+function msg(t,c=""){msgEl.textContent=t;msgEl.className=c}
 
 /* ===== 保存 ===== */
 function save(){
@@ -283,8 +269,11 @@ document.addEventListener("keydown",e=>{
  if(e.key==="1")stopReel(0);
  if(e.key==="2")stopReel(1);
  if(e.key==="3")stopReel(2);
- if(e.key==="a"||e.key==="A")toggleAuto();
+ if(e.key==="b"||e.key==="B")
+  betEl.selectedIndex=(betEl.selectedIndex+1)%betEl.length;
+ if(e.key==="s"||e.key==="S")toggleSound();
  if(e.key==="f"||e.key==="F")toggleFull();
+ if(e.key==="a"||e.key==="A")toggleAuto();
 });
 
 /* ===== DOM ===== */
