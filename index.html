@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>STOP SLOT ULTIMATE</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;
+ background:#111;
+ color:#fff;
+ font-family:system-ui,sans-serif;
+ display:flex;
+ justify-content:center;
+ align-items:center;
+ height:100vh;
+}
+#game{
+ background:#222;
+ padding:12px;
+ border-radius:16px;
+ width:min(380px,96vw);
+ transition:transform .1s;
+}
+h1{text-align:center;margin:6px 0}
+#reels{display:flex;gap:8px;margin:12px 0}
+.reel{
+ flex:1;height:90px;background:#000;border-radius:12px;
+ font-size:48px;display:flex;justify-content:center;align-items:center;
+ box-shadow:inset 0 0 12px #666;
+}
+.controls{display:flex;gap:6px;margin-bottom:6px}
+button,select{
+ flex:1;padding:10px;font-size:16px;border:none;border-radius:10px
+}
+button{background:#ffcc00}
+.stop{background:#ff6666}
+#info{text-align:center;font-size:14px}
+.win{color:#00ff88;font-weight:bold}
+
+/* 演出 */
+.flash{animation:flash .2s 4}
+@keyframes flash{
+ 0%{background:#222}
+ 50%{background:#fff;color:#000}
+}
+.shake{animation:shake .3s}
+@keyframes shake{
+ 0%{transform:translate(0)}
+ 25%{transform:translate(5px)}
+ 50%{transform:translate(-5px)}
+ 75%{transform:translate(5px)}
+}
+.rare{
+ animation:rare 1s infinite alternate;
+}
+@keyframes rare{
+ from{filter:drop-shadow(0 0 5px gold)}
+ to{filter:drop-shadow(0 0 20px gold)}
+}
+
+/* 履歴 */
+#historyBox{
+ margin-top:10px;
+ background:#111;
+ border-radius:12px;
+ padding:6px;
+ max-height:160px;
+ overflow-y:auto;
+ font-size:13px;
+}
+.historyItem{
+ border-bottom:1px solid #333;
+ padding:4px 0;
+}
+.historyItem:last-child{border:none}
+.historyBig{color:#00ff88}
+.historyJackpot{color:#ffd700;font-weight:bold}
+</style>
+</head>
+<body>
+
+<div id="game">
+<h1>🎰 STOP SLOT</h1>
+
+<div id="reels">
+ <div class="reel" id="r1">❓</div>
+ <div class="reel" id="r2">❓</div>
+ <div class="reel" id="r3">❓</div>
+</div>
+
+<div class="controls">
+ <button onclick="start()">START</button>
+ <button class="stop" onclick="stopReel(0)">STOP</button>
+ <button class="stop" onclick="stopReel(1)">STOP</button>
+ <button class="stop" onclick="stopReel(2)">STOP</button>
+</div>
+
+<div class="controls">
+ <select id="bet">
+  <option value="10">BET 10</option>
+  <option value="20">BET 20</option>
+  <option value="50">BET 50</option>
+ </select>
+ <button onclick="toggleSound()">🔊</button>
+</div>
+
+<div class="controls">
+ <button onclick="save()">💾</button>
+ <button onclick="clearHistory()">🧹履歴削除</button>
+</div>
+
+<div id="info">
+ メダル: <span id="medal"></span><br>
+ <span id="msg"></span>
+</div>
+
+<!-- 履歴 -->
+<div id="historyBox"></div>
+
+</div>
+
+<script>
+/* ===== DOM ===== */
+const game=document.getElementById("game");
+const r1=document.getElementById("r1");
+const r2=document.getElementById("r2");
+const r3=document.getElementById("r3");
+const reels=[r1,r2,r3];
+const betEl=document.getElementById("bet");
+const medalEl=document.getElementById("medal");
+const msgEl=document.getElementById("msg");
+const historyBox=document.getElementById("historyBox");
+
+/* ===== サウンド ===== */
+const ctx=new AudioContext();
+function tone(f,t=120){
+ const o=ctx.createOscillator(),g=ctx.createGain();
+ o.frequency.value=f;
+ o.connect(g);g.connect(ctx.destination);
+ o.start();
+ g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+t/1000);
+ setTimeout(()=>o.stop(),t);
+}
+
+/* ===== 確率 ===== */
+const table=[
+ {s:"🍒",w:30},{s:"🍋",w:30},{s:"🔔",w:20},
+ {s:"⭐",w:15},{s:"7️⃣",w:4},{s:"💎",w:1}
+];
+
+let medal=100;
+let bgmOn=true;
+let spinning=[false,false,false];
+let timers=[];
+let history=[];
+
+load();update();renderHistory();
+
+/* ===== メイン ===== */
+function start(){
+ const bet=+betEl.value;
+ if(medal<bet){msg("メダル不足");return;}
+ medal-=bet;
+ msg("");
+ reels.forEach((r,i)=>{
+  if(spinning[i])return;
+  spinning[i]=true;
+  timers[i]=setInterval(()=>r.textContent=lot(),60);
+ });
+ update();
+}
+
+function stopReel(i){
+ if(!spinning[i])return;
+ clearInterval(timers[i]);
+ spinning[i]=false;
+ tone(800,80);
+ if(spinning.every(v=>!v))judge();
+}
+
+function judge(){
+ const a=r1.textContent,b=r2.textContent,c=r3.textContent;
+ const bet=+betEl.value;
+ let gain=0,type="ハズレ",cls="";
+
+ reels.forEach(r=>r.classList.remove("rare"));
+
+ if(a===b&&b===c){
+  let m=5;
+  if(a==="7️⃣"){m=20;type="BIG";cls="historyBig";}
+  if(a==="💎"){m=50;type="JACKPOT";cls="historyJackpot";}
+  gain=bet*m;
+  medal+=gain;
+  flash();shake();
+  reels.forEach(r=>r.classList.add("rare"));
+ }else if(a===b||b===c||a===c){
+  gain=bet*2;
+  medal+=gain;
+  type="小当たり";
+  cls="historyBig";
+  flash();
+ }
+
+ addHistory(`${a}${b}${c}`,type,gain,cls);
+ msg(type+(gain?` +${gain}`:""));
+ update();
+}
+
+/* ===== 履歴 ===== */
+function addHistory(result,type,gain,cls){
+ history.unshift({result,type,gain,cls});
+ history=history.slice(0,30);
+ save();
+ renderHistory();
+}
+
+function renderHistory(){
+ historyBox.innerHTML=history.map(h=>
+  `<div class="historyItem ${h.cls}">
+   ${h.result} ｜ ${h.type} ${h.gain?`(+${h.gain})`:""}
+  </div>`
+ ).join("");
+}
+
+function clearHistory(){
+ history=[];
+ save();
+ renderHistory();
+ msg("履歴削除");
+}
+
+/* ===== 演出 ===== */
+function flash(){
+ game.classList.add("flash");
+ setTimeout(()=>game.classList.remove("flash"),500);
+}
+function shake(){
+ game.classList.add("shake");
+ setTimeout(()=>game.classList.remove("shake"),300);
+}
+
+/* ===== 抽選 ===== */
+function lot(){
+ let r=Math.random()*100,sum=0;
+ for(let t of table){sum+=t.w;if(r<sum)return t.s;}
+}
+
+/* ===== UI ===== */
+function update(){medalEl.textContent=medal;}
+function msg(t){msgEl.textContent=t;}
+function toggleSound(){bgmOn=!bgmOn;msg(bgmOn?"🔊ON":"🔇OFF");}
+
+/* ===== セーブ ===== */
+function save(){
+ localStorage.setItem("slot",JSON.stringify({medal,history}));
+}
+function load(){
+ const d=localStorage.getItem("slot");
+ if(d){
+  const o=JSON.parse(d);
+  medal=o.medal??100;
+  history=o.history??[];
+ }
+}
+</script>
+</body>
+</html>
