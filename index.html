@@ -28,16 +28,8 @@ body{
  box-shadow:0 0 20px #000;
  transition:transform .15s;
 }
-h1{
- text-align:center;
- margin:6px 0;
- font-size:clamp(20px,5vw,26px);
-}
-#reels{
- display:flex;
- gap:8px;
- margin:10px 0;
-}
+h1{text-align:center;margin:6px 0}
+#reels{display:flex;gap:8px;margin:10px 0}
 .reel{
  flex:1;
  height:clamp(70px,20vw,100px);
@@ -49,32 +41,17 @@ h1{
  align-items:center;
  box-shadow:inset 0 0 12px #666;
 }
-.controls{
- display:flex;
- gap:6px;
- margin-bottom:6px;
-}
+.controls{display:flex;gap:6px;margin-bottom:6px}
 button,select{
- flex:1;
- min-height:48px;
- font-size:clamp(14px,4vw,16px);
- border:none;
- border-radius:12px;
+ flex:1;min-height:48px;
+ font-size:16px;border:none;border-radius:12px
 }
-button{
- background:#ffcc00;
- font-weight:bold;
-}
-button:hover{filter:brightness(1.1)}
+button{background:#ffcc00;font-weight:bold}
 .stop{background:#ff6666}
-#info{
- text-align:center;
- font-size:clamp(12px,3.5vw,14px);
- margin-bottom:4px;
-}
+#info{text-align:center;font-size:14px}
 .win{color:#00ff88;font-weight:bold}
 
-/* ===== 演出 ===== */
+/* 演出 */
 .flash{animation:flash .2s 4}
 @keyframes flash{
  0%{background:#222}
@@ -95,7 +72,7 @@ button:hover{filter:brightness(1.1)}
  to{filter:drop-shadow(0 0 20px gold)}
 }
 
-/* ===== 履歴 ===== */
+/* 履歴 */
 #historyBox{
  margin-top:8px;
  background:#111;
@@ -103,13 +80,12 @@ button:hover{filter:brightness(1.1)}
  padding:6px;
  max-height:140px;
  overflow-y:auto;
- font-size:clamp(11px,3vw,13px);
+ font-size:13px;
 }
 .historyItem{
  padding:4px 0;
  border-bottom:1px solid #333;
 }
-.historyItem:last-child{border:none}
 .historyBig{color:#00ff88}
 .historyJackpot{color:#ffd700;font-weight:bold}
 </style>
@@ -138,12 +114,12 @@ button:hover{filter:brightness(1.1)}
   <option value="20">BET 20</option>
   <option value="50">BET 50</option>
  </select>
- <button onclick="toggleSound()">🔊</button>
+ <button onclick="toggleSound()">BGM・SE</button>
 </div>
 
 <div class="controls">
- <button onclick="save()">💾</button>
- <button onclick="clearHistory()">🧹履歴</button>
+ <button onclick="save()">セーブ</button>
+ <button onclick="clearHistory()">履歴削除</button>
 </div>
 
 <div id="info">
@@ -155,30 +131,42 @@ button:hover{filter:brightness(1.1)}
 </div>
 
 <script>
-const r1=r2=r3=null;
-const reels=[document.getElementById("r1"),document.getElementById("r2"),document.getElementById("r3")];
+/* DOM */
+const reels=[
+ document.getElementById("r1"),
+ document.getElementById("r2"),
+ document.getElementById("r3")
+];
 const betEl=document.getElementById("bet");
 const medalEl=document.getElementById("medal");
 const msgEl=document.getElementById("msg");
 const historyBox=document.getElementById("historyBox");
 const game=document.getElementById("game");
 
+/* 確率テーブル */
 const table=[
- {s:"🍒",w:30},{s:"🍋",w:30},{s:"🔔",w:20},
- {s:"⭐",w:15},{s:"7️⃣",w:4},{s:"💎",w:1}
+ {s:"🍒",w:28},
+ {s:"🍋",w:28},
+ {s:"🔔",w:18},
+ {s:"⭐",w:13},
+ {s:"🎞️",w:8},   // BAR
+ {s:"7️⃣",w:4},
+ {s:"💎",w:1}
 ];
 
 let medal=100;
 let spinning=[false,false,false];
 let timers=[];
 let history=[];
+let sound=true;
 
 load();update();renderHistory();
 
+/* ゲーム */
 function start(){
  const bet=+betEl.value;
  if(medal<bet){msg("メダル不足");return;}
- medal-=bet;
+ medal-=bet; msg("");
  reels.forEach((r,i)=>{
   if(spinning[i])return;
   spinning[i]=true;
@@ -193,31 +181,39 @@ function stopReel(i){
  if(spinning.every(v=>!v))judge();
 }
 function judge(){
- const a=reels[0].textContent,b=reels[1].textContent,c=reels[2].textContent;
+ const [a,b,c]=reels.map(r=>r.textContent);
  const bet=+betEl.value;
  let gain=0,type="ハズレ",cls="";
  reels.forEach(r=>r.classList.remove("rare"));
+
  if(a===b&&b===c){
   let m=5;
-  if(a==="7️⃣"){m=20;type="BIG";cls="historyBig";}
+  if(a==="🎞️"){m=10;type="BAR BIG";}
+  if(a==="7️⃣"){m=20;type="BIG";}
   if(a==="💎"){m=50;type="JACKPOT";cls="historyJackpot";}
   gain=bet*m; medal+=gain;
   flash();shake();
   reels.forEach(r=>r.classList.add("rare"));
+ }else if([a,b,c].filter(v=>v==="🎞️").length>=2){
+  gain=bet*3; medal+=gain;
+  type="BAR小当たり"; flash();
  }else if(a===b||b===c||a===c){
   gain=bet*2; medal+=gain;
-  type="小当たり"; cls="historyBig"; flash();
+  type="小当たり"; flash();
  }
+
  addHistory(`${a}${b}${c}`,type,gain,cls);
  msg(type+(gain?` +${gain}`:""));
  update();
 }
+
+/* 抽選 */
 function lot(){
  let r=Math.random()*100,sum=0;
  for(const t of table){sum+=t.w;if(r<sum)return t.s;}
 }
-function update(){medalEl.textContent=medal;}
-function msg(t){msgEl.textContent=t;}
+
+/* 演出 */
 function flash(){
  game.classList.add("flash");
  setTimeout(()=>game.classList.remove("flash"),400);
@@ -231,14 +227,21 @@ function shake(){
 function addHistory(result,type,gain,cls){
  history.unshift({result,type,gain,cls});
  history=history.slice(0,30);
- save(); renderHistory();
+ save();renderHistory();
 }
 function renderHistory(){
  historyBox.innerHTML=history.map(h=>
-  `<div class="historyItem ${h.cls}">${h.result}｜${h.type}${h.gain?` +${h.gain}`:""}</div>`
+  `<div class="historyItem ${h.cls}">
+   ${h.result}｜${h.type}${h.gain?` +${h.gain}`:""}
+  </div>`
  ).join("");
 }
 function clearHistory(){history=[];save();renderHistory();msg("履歴削除");}
+
+/* UI */
+function update(){medalEl.textContent=medal;}
+function msg(t){msgEl.textContent=t;}
+function toggleSound(){sound=!sound;msg(sound?"🔊ON":"🔇OFF");}
 
 /* 保存 */
 function save(){
@@ -259,6 +262,12 @@ document.addEventListener("keydown",e=>{
  if(e.key==="1")stopReel(0);
  if(e.key==="2")stopReel(1);
  if(e.key==="3")stopReel(2);
+ if(e.key==="r"||e.key==="R"){stopReel(0);stopReel(1);stopReel(2);}
+ if(e.key==="b"||e.key==="B"){
+  betEl.selectedIndex=(betEl.selectedIndex+1)%betEl.length;
+ }
+ if(e.key==="s"||e.key==="S")toggleSound();
+ if(e.key==="Delete")clearHistory();
 });
 </script>
 </body>
