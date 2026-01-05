@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>STOP SLOT CANVAS</title>
+<title>SLOT MACHINE</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <style>
 *{box-sizing:border-box}
@@ -51,7 +51,7 @@ button{background:#ffcc00}
 <body>
 
 <div id="game">
-<h1>🎰 STOP SLOT</h1>
+<h1>SLOT MACHINE</h1>
 
 <div id="reels">
  <canvas id="c1"></canvas>
@@ -72,13 +72,13 @@ button{background:#ffcc00}
   <option value="20">BET 20</option>
   <option value="50">BET 50</option>
  </select>
- <button onclick="toggleSound()">🔊</button>
- <button onclick="toggleFull()">🖥</button>
+ <button onclick="toggleSound()">🔊 BGM・SE</button>
+ <button onclick="toggleFull()">🖥 フルスクリーン</button>
  <button class="auto" onclick="toggleAuto()">▶AUTO</button>
 </div>
 
 <div class="controls">
- <button onclick="save()">💾</button>
+ <button onclick="save()">💾 セーブ</button>
  <button onclick="clearAll()">🗑 リセット</button>
 </div>
 
@@ -96,7 +96,7 @@ button{background:#ffcc00}
 
 <script>
 /* ===== シンボル ===== */
-const symbols=["🍒","🍋","🔔","⭐","🟥BAR","7️⃣","💎"];
+const symbols=["🍒","🍋","🔔","⭐","🎞️","7️⃣","💎"];
 
 /* ===== Canvasリール ===== */
 class Reel{
@@ -201,7 +201,7 @@ function judge(){
  const bet=+betEl.value;
  let gain=0,text="ハズレ",cls="";
  if(a===b&&b===c){
-  let m=a==="💎"?100:a==="7️⃣"?30:a==="🟥BAR"?15:5;
+  let m=a==="💎"?100:a==="7️⃣"?30:a==="🎞️"?15:5;
   gain=bet*m; medal+=gain;
   text="🎉 BIG WIN x"+m; cls="win"; stats.win++;
  }else if(a===b||b===c||a===c){
