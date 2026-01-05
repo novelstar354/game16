@@ -4,73 +4,54 @@
 <meta charset="UTF-8">
 <title>SLOT MACHINE</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<link rel="icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXpgl9VrjKZLmPonXHSLJ8uLyNOPi7chR_Mtt0SCVJTx5-OI3J9WMJv_aO&s=10" sizes="16×16" type="image/png" />  
+ <link rel="icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXpgl9VrjKZLmPonXHSLJ8uLyNOPi7chR_Mtt0SCVJTx5-OI3J9WMJv_aO&s=10" sizes="16×16" type="image/png" />  
 <style>
 *{box-sizing:border-box}
 body{
-  margin:0;
-  background:#111;
-  color:#fff;
-  font-family:system-ui,sans-serif;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
+ margin:0;background:#111;color:#fff;
+ font-family:system-ui,sans-serif;
+ display:flex;justify-content:center;align-items:center;min-height:100vh;
 }
 #game{
-  background:#222;
-  padding:12px;
-  border-radius:16px;
-  width:min(420px,96vw);
+ background:#222;padding:12px;border-radius:16px;
+ width:min(440px,96vw);
 }
-h1{text-align:center;margin:6px 0}
-
+h1,h3{text-align:center;margin:6px 0}
 #reels{display:flex;gap:8px;margin:10px 0}
 .reel{
-  flex:1;height:90px;
-  background:#000;
-  border-radius:12px;
-  font-size:44px;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  box-shadow:inset 0 0 12px #666;
-  transition:transform .15s, filter .15s;
+ flex:1;height:90px;background:#000;border-radius:12px;
+ font-size:44px;display:flex;justify-content:center;align-items:center;
+ box-shadow:inset 0 0 12px #666;
+ transition:.15s;
 }
-
 .flash{filter:brightness(2)}
+.rare{animation:rainbow 1s}
+@keyframes rainbow{
+ 0%{filter:hue-rotate(0deg)}
+ 100%{filter:hue-rotate(360deg)}
+}
 .shake{animation:shake .3s}
 @keyframes shake{
-  0%{transform:translate(0)}
-  25%{transform:translate(3px)}
-  50%{transform:translate(-3px)}
-  75%{transform:translate(3px)}
-  100%{transform:translate(0)}
+ 0%{transform:translate(0)}
+ 25%{transform:translate(3px)}
+ 50%{transform:translate(-3px)}
+ 75%{transform:translate(3px)}
 }
-
 .controls{display:flex;gap:6px;margin-bottom:6px}
 button,select{
-  flex:1;
-  padding:10px;
-  font-size:16px;
-  border:none;
-  border-radius:10px;
+ flex:1;padding:10px;font-size:16px;border:none;border-radius:10px
 }
 button{background:#ffcc00}
 .stop{background:#ff6666}
-
 #info{text-align:center;font-size:14px}
 .win{color:#00ff88;font-weight:bold}
 .jackpot{color:#ff66ff;font-weight:bold}
-
-#history{
-  background:#111;
-  border-radius:10px;
-  padding:6px;
-  max-height:90px;
-  overflow:auto;
-  font-size:12px;
+#history,#stats{
+ background:#111;border-radius:10px;padding:6px;
+ font-size:12px;margin-bottom:6px
 }
+.plus{color:#00ff88}
+.minus{color:#ff6666}
 </style>
 </head>
 <body>
@@ -79,95 +60,73 @@ button{background:#ffcc00}
 <h1>SLOT MACHINE</h1>
 
 <div id="reels">
-  <div class="reel" id="r1">❓</div>
-  <div class="reel" id="r2">❓</div>
-  <div class="reel" id="r3">❓</div>
+ <div class="reel" id="r1">❓</div>
+ <div class="reel" id="r2">❓</div>
+ <div class="reel" id="r3">❓</div>
 </div>
 
 <div class="controls">
-  <button onclick="start()">START</button>
-  <button class="stop" onclick="stopReel(0)">STOP</button>
-  <button class="stop" onclick="stopReel(1)">STOP</button>
-  <button class="stop" onclick="stopReel(2)">STOP</button>
+ <button onclick="start()">START</button>
+ <button class="stop" onclick="stopReel(0)">STOP</button>
+ <button class="stop" onclick="stopReel(1)">STOP</button>
+ <button class="stop" onclick="stopReel(2)">STOP</button>
 </div>
 
 <div class="controls">
-  <select id="bet">
-    <option value="10">BET 10</option>
-    <option value="20">BET 20</option>
-    <option value="50">BET 50</option>
-  </select>
-  <button onclick="toggleSound()">BGM・SE</button>
+ <select id="bet">
+  <option value="10">BET 10</option>
+  <option value="20">BET 20</option>
+  <option value="50">BET 50</option>
+ </select>
+ <button onclick="toggleSound()">🔊</button>
 </div>
 
 <div class="controls">
-  <button onclick="save()">セーブ</button>
-  <button onclick="clearAll()">🗑 履歴削除</button>
+ <button onclick="save()">💾 セーブ</button>
+ <button onclick="clearAll()">🗑 リセット</button>
 </div>
 
 <div id="info">
-  メダル: <span id="medal"></span><br>
-  <span id="msg"></span><br>
-  <small>
-    ⌨ Space/Enter:START | 1-3:STOP | B:BET | S:SOUND
-  </small>
+ メダル: <span id="medal"></span><br>
+ <span id="msg"></span>
 </div>
+
+<h3>📊 統計</h3>
+<div id="stats"></div>
 
 <h3>📜 履歴</h3>
 <div id="history"></div>
 </div>
 
 <script>
-/* ===== 確率テーブル（BAR追加） ===== */
 const table=[
- {s:"🍒",w:25},
- {s:"🍋",w:25},
- {s:"🔔",w:18},
- {s:"⭐",w:15},
- {s:"🎞️",w:10},
- {s:"7️⃣",w:5},
- {s:"💎",w:2}
+ {s:"🍒",w:25},{s:"🍋",w:25},{s:"🔔",w:18},
+ {s:"⭐",w:15},{s:"🎞️",w:10},{s:"7️⃣",w:5},{s:"💎",w:2}
 ];
 
-let medal=100;
-let sound=true;
-let spinning=[false,false,false];
-let timers=[];
+let medal=100,sound=true;
+let spinning=[false,false,false],timers=[];
 let history=[];
+let stats={play:0,win:0,diff:0};
 
 const reels=[r1,r2,r3];
 
-/* ===== サウンド ===== */
-const bgm=new AudioContext();
-function playBGM(){
- if(!sound)return;
- const o=bgm.createOscillator();
- o.frequency.value=120;
- o.connect(bgm.destination);
- o.start();
- setTimeout(()=>o.stop(),500);
-}
-
-function se(freq=600,time=100){
+function se(f=600,t=80){
  if(!sound)return;
  const a=new AudioContext(),o=a.createOscillator();
- o.frequency.value=freq;
- o.connect(a.destination);
- o.start();
- setTimeout(()=>{o.stop();a.close();},time);
+ o.frequency.value=f;o.connect(a.destination);o.start();
+ setTimeout(()=>{o.stop();a.close()},t);
 }
 
-/* ===== ゲーム ===== */
 function start(){
  const bet=+betEl.value;
  if(medal<bet){msg("メダル不足");return;}
  medal-=bet;
  reels.forEach((r,i)=>{
-   if(spinning[i])return;
-   spinning[i]=true;
-   timers[i]=setInterval(()=>r.textContent=lot(),60);
+  if(spinning[i])return;
+  spinning[i]=true;
+  timers[i]=setInterval(()=>r.textContent=lot(),60);
  });
- playBGM();
  update();
 }
 
@@ -176,106 +135,104 @@ function stopReel(i){
  clearInterval(timers[i]);
  spinning[i]=false;
  reels[i].classList.add("shake");
- se(800,80);
+ se(800);
  setTimeout(()=>reels[i].classList.remove("shake"),150);
  if(spinning.every(v=>!v))judge();
 }
 
 function judge(){
+ stats.play++;
  const a=r1.textContent,b=r2.textContent,c=r3.textContent;
- let bet=+betEl.value;
- let result="ハズレ";
- let cls="";
+ const bet=+betEl.value;
+ let gain=0,text="ハズレ",cls="";
+
  if(a===b&&b===c){
-   let m= a==="💎"?100 :
-          a==="7️⃣"?30 :
-          a==="🎞️"?15 : 5;
-   medal+=bet*m;
-   result="🎉 BIG WIN x"+m;
-   cls= a==="💎"?"jackpot":"win";
-   flash();
+  let m=a==="💎"?100:a==="7️⃣"?30:a==="🎞️"?15:5;
+  gain=bet*m; medal+=gain;
+  text="🎉 BIG WIN x"+m;
+  cls=a==="💎"?"jackpot":"win";
+  stats.win++;
+  reels.forEach(r=>r.classList.add("flash","rare"));
+  setTimeout(()=>reels.forEach(r=>r.classList.remove("flash","rare")),600);
  }else if(a===b||b===c||a===c){
-   medal+=bet*2;
-   result="✨ WIN x2";
-   cls="win";
+  gain=bet*2; medal+=gain;
+  text="✨ WIN x2"; cls="win"; stats.win++;
  }
- history.unshift(`${a}${b}${c} → ${result}`);
- history=history.slice(0,20);
- renderHistory();
- msg(result,cls);
- update();
+
+ const diff=gain-bet;
+ stats.diff+=diff;
+
+ history.unshift({
+  t:new Date().toLocaleTimeString(),
+  line:`${a}${b}${c} → ${text}`,
+  diff
+ });
+ history=history.slice(0,30);
+ renderHistory(); renderStats();
+ msg(text,cls); update();
 }
 
 function lot(){
  let r=Math.random()*100,sum=0;
- for(let t of table){
-   sum+=t.w;
-   if(r<sum)return t.s;
- }
+ for(let t of table){sum+=t.w;if(r<sum)return t.s}
 }
-
-/* ===== 演出 ===== */
-function flash(){
- reels.forEach(r=>r.classList.add("flash"));
- setTimeout(()=>reels.forEach(r=>r.classList.remove("flash")),300);
-}
-
-/* ===== UI ===== */
-function update(){medalEl.textContent=medal;}
-function msg(t,c=""){msgEl.textContent=t;msgEl.className=c;}
 
 function renderHistory(){
- historyEl.innerHTML=history.map(h=>`<div>${h}</div>`).join("");
+ historyEl.innerHTML=history.map(h=>{
+  const s=h.diff>=0?"+":"";
+  const c=h.diff>=0?"plus":"minus";
+  return `<div>[${h.t}] ${h.line} <span class="${c}">(${s}${h.diff}枚)</span></div>`;
+ }).join("");
 }
 
-/* ===== 保存 ===== */
+function renderStats(){
+ statsEl.innerHTML=
+  `総回転: ${stats.play}<br>
+   勝利: ${stats.win}<br>
+   勝率: ${stats.play?Math.round(stats.win/stats.play*100):0}%<br>
+   総差枚: ${stats.diff}`;
+}
+
+function update(){medalEl.textContent=medal}
+function msg(t,c=""){msgEl.textContent=t;msgEl.className=c}
+
 function save(){
- localStorage.setItem("slot",JSON.stringify({medal,history}));
+ localStorage.setItem("slot",JSON.stringify({medal,history,stats}));
  msg("セーブ完了");
 }
 function load(){
  const d=localStorage.getItem("slot");
  if(d){
-   const o=JSON.parse(d);
-   medal=o.medal;
-   history=o.history||[];
+  const o=JSON.parse(d);
+  medal=o.medal;history=o.history||[];stats=o.stats||stats;
  }
- renderHistory();
+ renderHistory();renderStats();update();
 }
-
-/* ★ 履歴削除＋メダルリセット ★ */
 function clearAll(){
  localStorage.removeItem("slot");
- history=[];
- medal=100;
- renderHistory();
- update();
- msg("履歴とメダルをリセット");
+ medal=100;history=[];stats={play:0,win:0,diff:0};
+ renderHistory();renderStats();update();
+ msg("完全リセット");
 }
+function toggleSound(){sound=!sound;msg(sound?"🔊ON":"🔇OFF")}
 
-function toggleSound(){
- sound=!sound;
- msg(sound?"🔊ON":"🔇OFF");
-}
-
-/* ===== キーボード ===== */
 document.addEventListener("keydown",e=>{
- if(e.code==="Space"||e.code==="Enter"){e.preventDefault();start();}
+ if(e.code==="Space"||e.code==="Enter"){e.preventDefault();start()}
  if(e.key==="1")stopReel(0);
  if(e.key==="2")stopReel(1);
  if(e.key==="3")stopReel(2);
  if(e.key==="b"||e.key==="B")
-   betEl.selectedIndex=(betEl.selectedIndex+1)%betEl.length;
+  betEl.selectedIndex=(betEl.selectedIndex+1)%betEl.length;
  if(e.key==="s"||e.key==="S")toggleSound();
 });
 
-/* ===== DOM ===== */
 const betEl=document.getElementById("bet");
 const medalEl=document.getElementById("medal");
 const msgEl=document.getElementById("msg");
 const historyEl=document.getElementById("history");
+const statsEl=document.getElementById("stats");
 
-load();update();
+load();
 </script>
 </body>
 </html>
