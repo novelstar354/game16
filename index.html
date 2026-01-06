@@ -67,7 +67,7 @@ button{background:#ffcc00}
 <body>
 
 <div id="game">
-<h1>SLOT MACHINE</h1>
+<h1>🎰 SLOT MACHINE</h1>
 
 <div id="reels">
  <div class="reel" id="r1">❓</div>
@@ -89,7 +89,7 @@ button{background:#ffcc00}
   <option value="50">BET 50</option>
  </select>
  <button onclick="toggleSound()">🔊 SOUND</button>
- <button onclick="toggleFull()">🖥 FULL SCREEN</button>
+ <button onclick="toggleFull()">🖥 FULL</button>
  <button class="auto" onclick="toggleAuto()">▶ AUTO</button>
 </div>
 
@@ -101,7 +101,9 @@ button{background:#ffcc00}
 <div id="info">
  メダル: <span id="medal"></span><br>
  <span id="msg"></span><br>
- <small>Space/Enter:START | 1-3:STOP | A:AUTO</small>
+ <small>
+ Space/Enter:START | 1-3:STOP | B:BET | S:SOUND | F:FULL | A:AUTO
+ </small>
 </div>
 
 <h3>📊 統計</h3>
@@ -112,6 +114,7 @@ button{background:#ffcc00}
 </div>
 
 <script>
+/* ===== 設定 ===== */
 const table=[
  {s:"🍒",w:25},{s:"🍋",w:25},{s:"🔔",w:18},
  {s:"⭐",w:15},{s:"🎞️",w:10},{s:"7️⃣",w:5},{s:"💎",w:2}
@@ -126,6 +129,7 @@ let stopIndex=0;
 
 const reels=[r1,r2,r3];
 
+/* ===== SE ===== */
 function se(f=600,t=80){
  if(!sound)return;
  const a=new AudioContext(),o=a.createOscillator();
@@ -133,6 +137,7 @@ function se(f=600,t=80){
  setTimeout(()=>{o.stop();a.close()},t);
 }
 
+/* ===== ゲーム ===== */
 function start(){
  if(spinning.some(v=>v))return;
  const bet=+betEl.value;
@@ -192,6 +197,7 @@ function judge(){
  msg(text,cls);update();
 }
 
+/* ===== AUTO ===== */
 function toggleAuto(force){
  auto=force!==undefined?force:!auto;
  clearInterval(autoTimer);
@@ -206,6 +212,7 @@ function toggleAuto(force){
  },1600);
 }
 
+/* ===== FULL ===== */
 function toggleFull(){
  if(!document.fullscreenElement){
   document.documentElement.requestFullscreen();
@@ -216,11 +223,11 @@ function toggleFull(){
  }
 }
 
+/* ===== 表示 ===== */
 function lot(){
  let r=Math.random()*100,sum=0;
  for(let t of table){sum+=t.w;if(r<sum)return t.s}
 }
-
 function renderHistory(){
  historyEl.innerHTML=history.map(h=>{
   const c=h.diff>=0?"plus":"minus";
@@ -239,6 +246,7 @@ function renderStats(){
 function update(){medalEl.textContent=medal}
 function msg(t,c=""){msgEl.textContent=t;msgEl.className=c}
 
+/* ===== SAVE ===== */
 function save(){
  localStorage.setItem("slot",JSON.stringify({medal,history,stats,auto,sound}));
  msg("セーブ完了");
@@ -266,14 +274,26 @@ function clearAll(){
 }
 function toggleSound(){sound=!sound;msg(sound?"🔊ON":"🔇OFF")}
 
+/* ===== キーボード ===== */
 document.addEventListener("keydown",e=>{
- if(e.code==="Space"||e.code==="Enter"){e.preventDefault();start()}
- if(e.key==="1")stopReel(0);
- if(e.key==="2")stopReel(1);
- if(e.key==="3")stopReel(2);
- if(e.key==="a"||e.key==="A")toggleAuto();
+ if(e.repeat)return;
+ switch(e.key.toLowerCase()){
+  case " ":
+  case "enter": e.preventDefault(); start(); break;
+  case "1": stopReel(0); break;
+  case "2": stopReel(1); break;
+  case "3": stopReel(2); break;
+  case "b":
+   betEl.selectedIndex=(betEl.selectedIndex+1)%betEl.length;
+   msg("BET変更: "+betEl.value);
+   break;
+  case "s": toggleSound(); break;
+  case "f": toggleFull(); break;
+  case "a": toggleAuto(); break;
+ }
 });
 
+/* ===== DOM ===== */
 const betEl=document.getElementById("bet");
 const medalEl=document.getElementById("medal");
 const msgEl=document.getElementById("msg");
